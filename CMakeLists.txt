@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.10)
 
 # Name of the project
-project (chess)
+project (chess_gui)
 enable_testing()
 
 set(CMAKE_CXX_STANDARD 20)
@@ -12,15 +12,13 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3")
 
 set(CMAKE_MODULE_PATH "${CMAKE_CXX_FLAGS}" "${CMAKE_CURRENT_SOURCE_DIR}")
 
-add_subdirectory(ext/fmt EXCLUDE_FROM_ALL)
-include_directories(chess PRIVATE ext/fmt/include)
+find_package(SDL2 REQUIRED)
+include_directories(chess_gui PRIVATE ${SDL2_INCLUDE_DIRS})
 
-add_subdirectory(ext/aelib)
-include_directories(chess PRIVATE ext/aelib)
+add_subdirectory(ext)
+include_directories(chess_gui PRIVATE ext/aelib)
+include_directories(chess_gui PRIVATE ext/imgui)
+include_directories(chess_gui PRIVATE ext/imgui/backends)
 
 add_subdirectory(src)
-add_subdirectory(docs)
-
-add_custom_target(chess_meta DEPENDS chess run_chess test_chess chess_game)
-
-install(TARGETS chess DESTINATION bin)
+install(TARGETS chess_gui DESTINATION bin)
