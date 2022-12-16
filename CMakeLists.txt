@@ -13,12 +13,15 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3")
 set(CMAKE_MODULE_PATH "${CMAKE_CXX_FLAGS}" "${CMAKE_CURRENT_SOURCE_DIR}")
 
 find_package(SDL2 REQUIRED)
-include_directories(chess_gui PRIVATE ${SDL2_INCLUDE_DIRS})
+find_package(SDL2_image REQUIRED)
+include_directories(chess_gui PRIVATE ${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIRS})
 
 add_subdirectory(ext)
 include_directories(chess_gui PRIVATE ext/aelib)
 include_directories(chess_gui PRIVATE ext/imgui)
 include_directories(chess_gui PRIVATE ext/imgui/backends)
+include_directories(chess_gui PRIVATE ext/json/include)
+include_directories(chess_gui PRIVATE ../chess/src)
 
 add_subdirectory(src)
 install(TARGETS chess_gui DESTINATION bin)

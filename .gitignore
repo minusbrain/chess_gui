@@ -30,6 +30,7 @@
 *.exe
 *.out
 *.app
+*.ini
 
 # Output folders
 _build/

@@ -1,9 +1,10 @@
 add_subdirectory(aelib)
+add_subdirectory(json)
 
 #=================== IMGUI ===================
 
 set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/imgui)
-add_library(imgui STATIC)
+add_library(imgui)
 
 target_sources( imgui
                 PRIVATE
@@ -24,4 +25,4 @@ target_include_directories( imgui
                             PUBLIC ${SDL2_DIR}/include
                             )
 
-target_link_libraries(imgui PUBLIC SDL2main SDL2 ${CMAKE_DL_LIBS} ${OPENGL_LIBRARIES})
+target_link_libraries(imgui PUBLIC ${SDL_TTF_LIBRARIES} ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS} ${OPENGL_LIBRARIES})

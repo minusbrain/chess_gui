@@ -1,22 +1,30 @@
-// Dear ImGui: standalone example application for SDL2 + SDL_Renderer
-// (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
-// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
-// Read online: https://github.com/ocornut/imgui/tree/master/docs
-
-// Important to understand: SDL_Renderer is an _optional_ component of SDL. We do not recommend you use SDL_Renderer
-// because it provide a rather limited API to the end-user. We provide this backend for the sake of completeness.
-// For a multi-platform app consider using e.g. SDL+DirectX on Windows and SDL+OpenGL on Linux/OSX.
-
 #include <SDL.h>
+#include <board.h>
+#include <board_factory.h>
+#include <imgui.h>
+#include <imgui_impl_sdl.h>
+#include <imgui_impl_sdlrenderer.h>
 #include <stdio.h>
+#include <types.h>
 
-#include "imgui.h"
-#include "imgui_impl_sdl.h"
-#include "imgui_impl_sdlrenderer.h"
+#include <string>
+
+#include "assets.h"
+#include "sdl_helper.h"
+#include "sprite.h"
+#include "texture.h"
 
 #if !SDL_VERSION_ATLEAST(2, 0, 17)
 #error This backend requires SDL 2.0.17+ because of SDL_RenderGeometry() function
 #endif
+
+std::map<ChessPiece, std::string> piece_2_asset{
+    {{Color::WHITE, Piece::PAWN}, "white_pawn"},     {{Color::BLACK, Piece::PAWN}, "black_pawn"},
+    {{Color::WHITE, Piece::ROOK}, "white_rook"},     {{Color::BLACK, Piece::ROOK}, "black_rook"},
+    {{Color::WHITE, Piece::KNIGHT}, "white_knight"}, {{Color::BLACK, Piece::KNIGHT}, "black_knight"},
+    {{Color::WHITE, Piece::BISHOP}, "white_bishop"}, {{Color::BLACK, Piece::BISHOP}, "black_bishop"},
+    {{Color::WHITE, Piece::QUEEN}, "white_queen"},   {{Color::BLACK, Piece::QUEEN}, "black_queen"},
+    {{Color::WHITE, Piece::KING}, "white_king"},     {{Color::BLACK, Piece::KING}, "black_king"}};
 
 // Main code
 int main(int, char**) {
@@ -37,7 +45,7 @@ int main(int, char**) {
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
     if (renderer == NULL) {
         SDL_Log("Error creating SDL_Renderer!");
-        return false;
+        return -1;
     }
     // SDL_RendererInfo info;
     // SDL_GetRendererInfo(renderer, &info);
@@ -59,27 +67,13 @@ int main(int, char**) {
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer_Init(renderer);
 
-    // Load Fonts
-    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont()
-    // to select them.
-    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
-    // - If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion,
-    // or display an error and quit).
-    // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling
-    // ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
-    // - Read 'docs/FONTS.md' for more instructions and details.
-    // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-    // io.Fonts->AddFontDefault();
-    // io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
-    // io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
-    // io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
-    // io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
-    // ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
-    // IM_ASSERT(font != NULL);
+    auto assets = loadAssets("assets/pieces.json", renderer);
+    Board board = BoardFactory::createStandardBoard();
+    // Board board = BoardFactory::createBoardFromFEN("4n2B/bRr5/Q2pK3/1nk2B1Q/1P1RNPP1/1B4rp/1pQ2pr1/1b2b1n1 w - - 0 1");
 
     // Our state
-    bool show_demo_window = true;
-    bool show_another_window = false;
+    bool show_demo_window = false;
+    bool show_chess = true;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // Main loop
@@ -112,33 +106,53 @@ int main(int, char**) {
 
         // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
         {
-            static float f = 0.0f;
-            static int counter = 0;
+            ImGui::Begin("Chess");  // Create a window called "Hello, world!" and append into it.
 
-            ImGui::Begin("Hello, world!");  // Create a window called "Hello, world!" and append into it.
-
-            ImGui::Text("This is some useful text.");           // Display some text (you can use a format strings too)
+            ImGui::Text("Available Windows");                   // Display some text (you can use a format strings too)
             ImGui::Checkbox("Demo Window", &show_demo_window);  // Edit bools storing our window open/close state
-            ImGui::Checkbox("Another Window", &show_another_window);
-
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);             // Edit 1 float using a slider from 0.0f to 1.0f
-            ImGui::ColorEdit3("clear color", (float*)&clear_color);  // Edit 3 floats representing a color
-
-            if (ImGui::Button("Button"))  // Buttons return true when clicked (most widgets return true when edited/activated)
-                counter++;
-            ImGui::SameLine();
-            ImGui::Text("counter = %d", counter);
+            ImGui::Checkbox("Chess Board", &show_chess);
 
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::End();
         }
 
         // 3. Show another simple window.
-        if (show_another_window) {
-            ImGui::Begin("Another Window", &show_another_window);  // Pass a pointer to our bool variable (the window will have a closing
-                                                                   // button that will clear the bool when clicked)
-            ImGui::Text("Hello from another window!");
-            if (ImGui::Button("Close Me")) show_another_window = false;
+        if (show_chess) {
+            static float scale = 2.0f;
+            static ImVec4 white = ImVec4(0.4f, 0.4f, 0.8f, 1.0f);
+            static ImVec4 black = ImVec4(0.0f, 0.0f, 0.2f, 1.0f);
+
+            ImGui::Begin("Chess Board");
+            // ImGui::ColorEdit3("White", (float*)&white);
+            // ImGui::ColorEdit3("Black", (float*)&black);
+            // ImGui::SliderFloat("Chess Scale", &scale, 0.5f, 4.0f);  // Edit 1 float using a slider from 0.0f to 1.0f
+            if (ImGui::BeginTable("Board", 8)) {
+                for (int i = 0; i < 8; ++i) ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 32.0f * scale);
+
+                for (int row = 0; row < 8; row++) {
+                    ImGui::TableNextRow(ImGuiTableRowFlags_None, 34.0f * scale);
+
+                    for (int column = 0; column < 8; column++) {
+                        ImGui::TableSetColumnIndex(column);
+                        auto piece = board.getPieceOnField({column + 1, 8 - row});
+
+                        if (row % 2 == 0) {
+                            ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg,
+                                                   column % 2 == 0 ? ImGui::GetColorU32(white) : ImGui::GetColorU32(black));
+
+                        } else {
+                            ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg,
+                                                   column % 2 == 0 ? ImGui::GetColorU32(black) : ImGui::GetColorU32(white));
+                        }
+
+                        if (piece) {
+                            get<Sprite>(assets, piece_2_asset[*piece])->drawGUI(scale);
+                        }
+                    }
+                }
+                ImGui::EndTable();
+            }
+            // ImGui::ShowMetricsWindow();
             ImGui::End();
         }
 
