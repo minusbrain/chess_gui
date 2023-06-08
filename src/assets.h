@@ -5,7 +5,7 @@
 
 class Sprite;
 class Texture;
-class SDL_Renderer;
+struct SDL_Renderer;
 
 using Asset = std::variant<std::shared_ptr<Texture>, std::shared_ptr<Sprite>>;
 
