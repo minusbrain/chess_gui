@@ -74,6 +74,7 @@ int main(int, char**) {
     // Our state
     bool show_demo_window = false;
     bool show_chess = true;
+    bool show_chess_log = true;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // Main loop
@@ -111,6 +112,7 @@ int main(int, char**) {
             ImGui::Text("Available Windows");                   // Display some text (you can use a format strings too)
             ImGui::Checkbox("Demo Window", &show_demo_window);  // Edit bools storing our window open/close state
             ImGui::Checkbox("Chess Board", &show_chess);
+            ImGui::Checkbox("Chess Log", &show_chess_log);
 
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::End();
@@ -152,7 +154,18 @@ int main(int, char**) {
                 }
                 ImGui::EndTable();
             }
+
             // ImGui::ShowMetricsWindow();
+            ImGui::End();
+        }
+
+        if (show_chess_log) {
+            ImGui::Begin("Chess Log");
+            // Using shortcut. You can use PushTextWrapPos()/PopTextWrapPos() for more flexibility.
+            ImGui::TextWrapped(
+                "This text should automatically wrap on the edge of the window. The current implementation "
+                "for text wrapping follows simple rules suitable for English and possibly other languages.");
+            ImGui::Spacing();
             ImGui::End();
         }
 
