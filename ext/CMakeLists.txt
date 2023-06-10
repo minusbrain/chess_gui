@@ -1,6 +1,8 @@
 add_subdirectory(aelib)
 add_subdirectory(json)
 
+add_subdirectory(fmt EXCLUDE_FROM_ALL)
+
 #=================== IMGUI ===================
 
 set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/imgui)

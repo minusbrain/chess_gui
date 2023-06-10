@@ -21,6 +21,7 @@ include_directories(chess_gui PRIVATE ext/aelib)
 include_directories(chess_gui PRIVATE ext/imgui)
 include_directories(chess_gui PRIVATE ext/imgui/backends)
 include_directories(chess_gui PRIVATE ext/json/include)
+include_directories(chess_gui PRIVATE ext/fmt/include)
 include_directories(chess_gui PRIVATE ../chess/src)
 
 add_subdirectory(src)

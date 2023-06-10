@@ -7,6 +7,6 @@ set (SOURCE_CPP
 
 add_executable(chess_gui ${SOURCE_CPP})
 
-target_link_libraries(chess_gui PRIVATE chess imgui SDL2::SDL2 SDL2_image::SDL2_image)
+target_link_libraries(chess_gui PRIVATE chess imgui SDL2::SDL2 SDL2_image::SDL2_image fmt::fmt-header-only)
 
 #add_subdirectory(test)
