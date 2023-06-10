@@ -5,3 +5,9 @@
 [submodule "ext/aelib"]
 	path = ext/aelib
 	url = git@github.com:minusbrain/aelib.git
+[submodule "ext/fmt"]
+        path = ext/fmt
+        url = https://github.com/fmtlib/fmt
+[submodule "ext/json"]
+        path = ext/json
+        url = git@github.com:nlohmann/json
