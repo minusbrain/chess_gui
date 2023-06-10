@@ -1,6 +1,8 @@
 #include <SDL.h>
 #include <board.h>
 #include <board_factory.h>
+#include <fmt/core.h>
+#include <fmt/format.h>
 #include <imgui.h>
 #include <imgui_impl_sdl.h>
 #include <imgui_impl_sdlrenderer.h>
@@ -25,6 +27,99 @@ std::map<ChessPiece, std::string> piece_2_asset{
     {{Color::WHITE, Piece::BISHOP}, "white_bishop"}, {{Color::BLACK, Piece::BISHOP}, "black_bishop"},
     {{Color::WHITE, Piece::QUEEN}, "white_queen"},   {{Color::BLACK, Piece::QUEEN}, "black_queen"},
     {{Color::WHITE, Piece::KING}, "white_king"},     {{Color::BLACK, Piece::KING}, "black_king"}};
+
+struct GameState {
+    Board board;
+    bool show_demo_window = false;
+    bool show_chess = true;
+    bool show_chess_log = true;
+    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+};
+
+void draw_gui(SDL_Renderer* renderer, const AssetMap& assets, GameState& state) {
+    // Start the Dear ImGui frame
+    ImGui_ImplSDLRenderer_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
+
+    // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about
+    // Dear ImGui!).
+    if (state.show_demo_window) ImGui::ShowDemoWindow(&state.show_demo_window);
+
+    // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+    {
+        ImGui::Begin("Chess");  // Create a window called "Hello, world!" and append into it.
+
+        ImGui::Text("Available Windows");                         // Display some text (you can use a format strings too)
+        ImGui::Checkbox("Demo Window", &state.show_demo_window);  // Edit bools storing our window open/close state
+        ImGui::Checkbox("Chess Board", &state.show_chess);
+        ImGui::Checkbox("Chess Log", &state.show_chess_log);
+
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        ImGui::End();
+    }
+
+    // 3. Show another simple window.
+    if (state.show_chess) {
+        static float scale = 2.0f;
+        static ImVec4 white = ImVec4(0.4f, 0.4f, 0.8f, 1.0f);
+        static ImVec4 black = ImVec4(0.0f, 0.0f, 0.2f, 1.0f);
+
+        std::string title = fmt::format("Chess Board ({} move)", state.board.whosTurnIsIt() == Color::WHITE ? "whites" : "blacks");
+
+        ImGui::Begin(title.c_str());
+        // ImGui::ColorEdit3("White", (float*)&white);
+        // ImGui::ColorEdit3("Black", (float*)&black);
+        // ImGui::SliderFloat("Chess Scale", &scale, 0.5f, 4.0f);  // Edit 1 float using a slider from 0.0f to 1.0f
+        if (ImGui::BeginTable("Board", 8)) {
+            for (int i = 0; i < 8; ++i) ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 32.0f * scale);
+
+            for (int row = 0; row < 8; row++) {
+                ImGui::TableNextRow(ImGuiTableRowFlags_None, 34.0f * scale);
+
+                for (int column = 0; column < 8; column++) {
+                    ImGui::TableSetColumnIndex(column);
+                    auto piece = state.board.getPieceOnField({column + 1, 8 - row});
+
+                    if (row % 2 == 0) {
+                        ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg,
+                                               column % 2 == 0 ? ImGui::GetColorU32(white) : ImGui::GetColorU32(black));
+
+                    } else {
+                        ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg,
+                                               column % 2 == 0 ? ImGui::GetColorU32(black) : ImGui::GetColorU32(white));
+                    }
+
+                    if (piece) {
+                        get<Sprite>(assets, piece_2_asset[*piece])->drawGUI(scale);
+                    }
+                }
+            }
+            ImGui::EndTable();
+        }
+
+        // ImGui::ShowMetricsWindow();
+        ImGui::End();
+    }
+
+    if (state.show_chess_log) {
+        ImGui::Begin("Chess Log");
+        std::string status = fmt::format("Chess Board ({} move)", state.board.whosTurnIsIt() == Color::WHITE ? "whites" : "blacks");
+        // Using shortcut. You can use PushTextWrapPos()/PopTextWrapPos() for more flexibility.
+        ImGui::TextWrapped("%s", status.c_str());
+        ImGui::Spacing();
+        ImGui::End();
+    }
+
+    // Rendering
+    ImGui::Render();
+    SDL_SetRenderDrawColor(renderer, (Uint8)(state.clear_color.x * 255), (Uint8)(state.clear_color.y * 255),
+                           (Uint8)(state.clear_color.z * 255), (Uint8)(state.clear_color.w * 255));
+    SDL_RenderClear(renderer);
+    ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
+
+    SDL_RenderPresent(renderer);
+}
 
 // Main code
 int main(int, char**) {
@@ -68,14 +163,10 @@ int main(int, char**) {
     ImGui_ImplSDLRenderer_Init(renderer);
 
     auto assets = loadAssets("assets/pieces.json", renderer);
-    Board board = BoardFactory::createStandardBoard();
-    // Board board = BoardFactory::createBoardFromFEN("4n2B/bRr5/Q2pK3/1nk2B1Q/1P1RNPP1/1B4rp/1pQ2pr1/1b2b1n1 w - - 0 1");
 
     // Our state
-    bool show_demo_window = false;
-    bool show_chess = true;
-    bool show_chess_log = true;
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    GameState state;
+    state.board = BoardFactory::createStandardBoard();
 
     // Main loop
     bool done = false;
@@ -96,86 +187,14 @@ int main(int, char**) {
                 done = true;
         }
 
-        // Start the Dear ImGui frame
-        ImGui_ImplSDLRenderer_NewFrame();
-        ImGui_ImplSDL2_NewFrame();
-        ImGui::NewFrame();
+        /*
+                OneMoveDeepBestPositionChessPlayer whitePlayer{"Andreas"};
+                HumanChessPlayer blackPlayer{"Human"};
+                ChessGame game{whitePlayer, blackPlayer};
+                game.startSyncronousGame();
+        */
 
-        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about
-        // Dear ImGui!).
-        if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
-
-        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
-        {
-            ImGui::Begin("Chess");  // Create a window called "Hello, world!" and append into it.
-
-            ImGui::Text("Available Windows");                   // Display some text (you can use a format strings too)
-            ImGui::Checkbox("Demo Window", &show_demo_window);  // Edit bools storing our window open/close state
-            ImGui::Checkbox("Chess Board", &show_chess);
-            ImGui::Checkbox("Chess Log", &show_chess_log);
-
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-            ImGui::End();
-        }
-
-        // 3. Show another simple window.
-        if (show_chess) {
-            static float scale = 2.0f;
-            static ImVec4 white = ImVec4(0.4f, 0.4f, 0.8f, 1.0f);
-            static ImVec4 black = ImVec4(0.0f, 0.0f, 0.2f, 1.0f);
-
-            ImGui::Begin("Chess Board");
-            // ImGui::ColorEdit3("White", (float*)&white);
-            // ImGui::ColorEdit3("Black", (float*)&black);
-            // ImGui::SliderFloat("Chess Scale", &scale, 0.5f, 4.0f);  // Edit 1 float using a slider from 0.0f to 1.0f
-            if (ImGui::BeginTable("Board", 8)) {
-                for (int i = 0; i < 8; ++i) ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 32.0f * scale);
-
-                for (int row = 0; row < 8; row++) {
-                    ImGui::TableNextRow(ImGuiTableRowFlags_None, 34.0f * scale);
-
-                    for (int column = 0; column < 8; column++) {
-                        ImGui::TableSetColumnIndex(column);
-                        auto piece = board.getPieceOnField({column + 1, 8 - row});
-
-                        if (row % 2 == 0) {
-                            ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg,
-                                                   column % 2 == 0 ? ImGui::GetColorU32(white) : ImGui::GetColorU32(black));
-
-                        } else {
-                            ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg,
-                                                   column % 2 == 0 ? ImGui::GetColorU32(black) : ImGui::GetColorU32(white));
-                        }
-
-                        if (piece) {
-                            get<Sprite>(assets, piece_2_asset[*piece])->drawGUI(scale);
-                        }
-                    }
-                }
-                ImGui::EndTable();
-            }
-
-            // ImGui::ShowMetricsWindow();
-            ImGui::End();
-        }
-
-        if (show_chess_log) {
-            ImGui::Begin("Chess Log");
-            // Using shortcut. You can use PushTextWrapPos()/PopTextWrapPos() for more flexibility.
-            ImGui::TextWrapped(
-                "This text should automatically wrap on the edge of the window. The current implementation "
-                "for text wrapping follows simple rules suitable for English and possibly other languages.");
-            ImGui::Spacing();
-            ImGui::End();
-        }
-
-        // Rendering
-        ImGui::Render();
-        SDL_SetRenderDrawColor(renderer, (Uint8)(clear_color.x * 255), (Uint8)(clear_color.y * 255), (Uint8)(clear_color.z * 255),
-                               (Uint8)(clear_color.w * 255));
-        SDL_RenderClear(renderer);
-        ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
-        SDL_RenderPresent(renderer);
+        draw_gui(renderer, assets, state);
     }
 
     // Cleanup
