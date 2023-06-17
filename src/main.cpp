@@ -38,6 +38,8 @@ struct GuiState {
     GuiState(ChessPlayer& white, ChessPlayer& black) : game(white, black) {}
     ChessGame game;
     std::array<FieldState, 64> fieldStates;
+
+    std::optional<ChessField> selectedField;
     std::vector<Move> validMoves;
     bool show_demo_window = false;
     bool show_chess = true;
@@ -53,9 +55,9 @@ static ImVec4 green = ImVec4(0.0f, 0.8f, 0.0f, 1.0f);
 static ImVec4 white = ImVec4(0.4f, 0.4f, 0.8f, 1.0f);
 static ImVec4 black = ImVec4(0.0f, 0.0f, 0.2f, 1.0f);
 
-std::map<FieldState, ImVec4> FieldStateColors{{FieldState::SELECTED_HAS_MOVES, light_green},
+std::map<FieldState, ImVec4> FieldStateColors{{FieldState::SELECTED_HAS_MOVES, green},
                                               {FieldState::SELECTED_NO_MOVES, orange},
-                                              {FieldState::MOVE_OPTION, green},
+                                              {FieldState::MOVE_OPTION, light_green},
                                               {FieldState::CHECK, orange},
                                               {FieldState::CHECK_MATE, red}};
 
@@ -64,6 +66,19 @@ void update_state(GuiState& state) {
         // Where did we click?
         // Is there a field?
         // Activate the field (are the moves available, show the moveable fields)
+        // Set selectedField properly
+
+        // MousePos.x - GetCursorScreenPos().x - GetScrollX()
+        // if (ImGui::IsMousePosValid())
+        //     ImGui::Text("Mouse pos: (%g, %g)", io.MousePos.x, io.MousePos.y);
+        // else
+        //     ImGui::Text("Mouse pos: <INVALID>");
+        // ImGui::Text("Mouse delta: (%g, %g)", io.MouseDelta.x, io.MouseDelta.y);
+
+        // int count = IM_ARRAYSIZE(io.MouseDown);
+        // ImGui::Text("Mouse down:");         for (int i = 0; i < count; i++) if (ImGui::IsMouseDown(i))      { ImGui::SameLine();
+        // ImGui::Text("b%d (%.02f secs)", i, io.MouseDownDuration[i]); } ImGui::Text("Mouse clicked:");      for (int i = 0; i < count;
+        // i++) if (ImGui::IsMouseClicked(i))
     }
 
     if (state.board_state_changed) {
@@ -111,18 +126,6 @@ void draw_gui(SDL_Renderer* renderer, const AssetMap& assets, GuiState& state) {
     // 3. Show another simple window.
     if (state.show_chess) {
         static float scale = 2.0f;
-
-        // MousePos.x - GetCursorScreenPos().x - GetScrollX()
-        // if (ImGui::IsMousePosValid())
-        //     ImGui::Text("Mouse pos: (%g, %g)", io.MousePos.x, io.MousePos.y);
-        // else
-        //     ImGui::Text("Mouse pos: <INVALID>");
-        // ImGui::Text("Mouse delta: (%g, %g)", io.MouseDelta.x, io.MouseDelta.y);
-
-        // int count = IM_ARRAYSIZE(io.MouseDown);
-        // ImGui::Text("Mouse down:");         for (int i = 0; i < count; i++) if (ImGui::IsMouseDown(i))      { ImGui::SameLine();
-        // ImGui::Text("b%d (%.02f secs)", i, io.MouseDownDuration[i]); } ImGui::Text("Mouse clicked:");      for (int i = 0; i < count;
-        // i++) if (ImGui::IsMouseClicked(i))
 
         std::string title =
             fmt::format("Chess Board ({} move)", state.game.getBoard().whosTurnIsIt() == Color::WHITE ? "whites" : "blacks");
