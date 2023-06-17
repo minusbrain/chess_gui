@@ -1,17 +1,22 @@
 #include <SDL.h>
 #include <board.h>
 #include <board_factory.h>
+#include <chess_game.h>
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <imgui.h>
 #include <imgui_impl_sdl.h>
 #include <imgui_impl_sdlrenderer.h>
+#include <move_debug.h>
 #include <stdio.h>
 #include <types.h>
 
+#include <array>
+#include <optional>
 #include <string>
 
 #include "assets.h"
+#include "rules.h"
 #include "sdl_helper.h"
 #include "sprite.h"
 #include "texture.h"
@@ -28,15 +33,59 @@ std::map<ChessPiece, std::string> piece_2_asset{
     {{Color::WHITE, Piece::QUEEN}, "white_queen"},   {{Color::BLACK, Piece::QUEEN}, "black_queen"},
     {{Color::WHITE, Piece::KING}, "white_king"},     {{Color::BLACK, Piece::KING}, "black_king"}};
 
-struct GameState {
-    Board board;
+enum FieldState { NORMAL = 0, SELECTED_HAS_MOVES, SELECTED_NO_MOVES, MOVE_OPTION, CHECK, CHECK_MATE };
+struct GuiState {
+    GuiState(ChessPlayer& white, ChessPlayer& black) : game(white, black) {}
+    ChessGame game;
+    std::array<FieldState, 64> fieldStates;
+    std::vector<Move> validMoves;
     bool show_demo_window = false;
     bool show_chess = true;
     bool show_chess_log = true;
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    bool board_state_changed = true;
 };
 
-void draw_gui(SDL_Renderer* renderer, const AssetMap& assets, GameState& state) {
+static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+static ImVec4 orange = ImVec4(239.0f / 255, 163.0f / 255, 10.0f / 255, 1.0f);
+static ImVec4 red = ImVec4(0.8f, 0.0f, 0.0f, 1.0f);
+static ImVec4 light_green = ImVec4(120.0f / 255, 1.0f, 120.0f / 255, 1.0f);
+static ImVec4 green = ImVec4(0.0f, 0.8f, 0.0f, 1.0f);
+static ImVec4 white = ImVec4(0.4f, 0.4f, 0.8f, 1.0f);
+static ImVec4 black = ImVec4(0.0f, 0.0f, 0.2f, 1.0f);
+
+std::map<FieldState, ImVec4> FieldStateColors{{FieldState::SELECTED_HAS_MOVES, light_green},
+                                              {FieldState::SELECTED_NO_MOVES, orange},
+                                              {FieldState::MOVE_OPTION, green},
+                                              {FieldState::CHECK, orange},
+                                              {FieldState::CHECK_MATE, red}};
+
+void update_state(GuiState& state) {
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+        // Where did we click?
+        // Is there a field?
+        // Activate the field (are the moves available, show the moveable fields)
+    }
+
+    if (state.board_state_changed) {
+        state.fieldStates.fill(FieldState::NORMAL);
+        const Board& board = state.game.getBoard();
+        Color turn = board.whosTurnIsIt();
+        if (ChessRules::isCheck(board) || ChessRules::isCheckMate(board)) {
+            std::optional<ChessField> kingFieldOpt = board.findFirstPiece([&turn](ChessPiece cp) {
+                return cp == ChessPiece{turn, Piece::KING};
+            });
+            assert(kingFieldOpt.has_value());
+            ChessField kingField = kingFieldOpt.value();
+            state.fieldStates[BoardHelper::fieldToIndex(kingField)] =
+                ChessRules::isCheckMate(board) ? FieldState::CHECK_MATE : FieldState::CHECK;
+        }
+        state.validMoves = ChessRules::getAllValidMoves(board);
+
+        state.board_state_changed = false;
+    }
+}
+
+void draw_gui(SDL_Renderer* renderer, const AssetMap& assets, GuiState& state) {
     // Start the Dear ImGui frame
     ImGui_ImplSDLRenderer_NewFrame();
     ImGui_ImplSDL2_NewFrame();
@@ -62,10 +111,21 @@ void draw_gui(SDL_Renderer* renderer, const AssetMap& assets, GameState& state) 
     // 3. Show another simple window.
     if (state.show_chess) {
         static float scale = 2.0f;
-        static ImVec4 white = ImVec4(0.4f, 0.4f, 0.8f, 1.0f);
-        static ImVec4 black = ImVec4(0.0f, 0.0f, 0.2f, 1.0f);
 
-        std::string title = fmt::format("Chess Board ({} move)", state.board.whosTurnIsIt() == Color::WHITE ? "whites" : "blacks");
+        // MousePos.x - GetCursorScreenPos().x - GetScrollX()
+        // if (ImGui::IsMousePosValid())
+        //     ImGui::Text("Mouse pos: (%g, %g)", io.MousePos.x, io.MousePos.y);
+        // else
+        //     ImGui::Text("Mouse pos: <INVALID>");
+        // ImGui::Text("Mouse delta: (%g, %g)", io.MouseDelta.x, io.MouseDelta.y);
+
+        // int count = IM_ARRAYSIZE(io.MouseDown);
+        // ImGui::Text("Mouse down:");         for (int i = 0; i < count; i++) if (ImGui::IsMouseDown(i))      { ImGui::SameLine();
+        // ImGui::Text("b%d (%.02f secs)", i, io.MouseDownDuration[i]); } ImGui::Text("Mouse clicked:");      for (int i = 0; i < count;
+        // i++) if (ImGui::IsMouseClicked(i))
+
+        std::string title =
+            fmt::format("Chess Board ({} move)", state.game.getBoard().whosTurnIsIt() == Color::WHITE ? "whites" : "blacks");
 
         ImGui::Begin(title.c_str());
         // ImGui::ColorEdit3("White", (float*)&white);
@@ -79,15 +139,21 @@ void draw_gui(SDL_Renderer* renderer, const AssetMap& assets, GameState& state) 
 
                 for (int column = 0; column < 8; column++) {
                     ImGui::TableSetColumnIndex(column);
-                    auto piece = state.board.getPieceOnField({column + 1, 8 - row});
+                    ChessField field{column + 1, row + 1};
+                    auto piece = state.game.getBoard().getPieceOnField(field);
 
-                    if (row % 2 == 0) {
-                        ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg,
-                                               column % 2 == 0 ? ImGui::GetColorU32(white) : ImGui::GetColorU32(black));
+                    if (state.fieldStates[BoardHelper::fieldToIndex(field)] == FieldState::NORMAL) {
+                        if (row % 2 == 0) {
+                            ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg,
+                                                   column % 2 == 0 ? ImGui::GetColorU32(white) : ImGui::GetColorU32(black));
 
+                        } else {
+                            ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg,
+                                                   column % 2 == 0 ? ImGui::GetColorU32(black) : ImGui::GetColorU32(white));
+                        }
                     } else {
                         ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg,
-                                               column % 2 == 0 ? ImGui::GetColorU32(black) : ImGui::GetColorU32(white));
+                                               ImGui::GetColorU32(FieldStateColors[state.fieldStates[row * 8 + column]]));
                     }
 
                     if (piece) {
@@ -104,7 +170,8 @@ void draw_gui(SDL_Renderer* renderer, const AssetMap& assets, GameState& state) 
 
     if (state.show_chess_log) {
         ImGui::Begin("Chess Log");
-        std::string status = fmt::format("Chess Board ({} move)", state.board.whosTurnIsIt() == Color::WHITE ? "whites" : "blacks");
+        std::string status = fmt::format("Chess Board ({} move)\nValid Moves:{}",
+                                         state.game.getBoard().whosTurnIsIt() == Color::WHITE ? "whites" : "blacks", state.validMoves);
         // Using shortcut. You can use PushTextWrapPos()/PopTextWrapPos() for more flexibility.
         ImGui::TextWrapped("%s", status.c_str());
         ImGui::Spacing();
@@ -113,8 +180,8 @@ void draw_gui(SDL_Renderer* renderer, const AssetMap& assets, GameState& state) 
 
     // Rendering
     ImGui::Render();
-    SDL_SetRenderDrawColor(renderer, (Uint8)(state.clear_color.x * 255), (Uint8)(state.clear_color.y * 255),
-                           (Uint8)(state.clear_color.z * 255), (Uint8)(state.clear_color.w * 255));
+    SDL_SetRenderDrawColor(renderer, (Uint8)(clear_color.x * 255), (Uint8)(clear_color.y * 255), (Uint8)(clear_color.z * 255),
+                           (Uint8)(clear_color.w * 255));
     SDL_RenderClear(renderer);
     ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
 
@@ -164,9 +231,12 @@ int main(int, char**) {
 
     auto assets = loadAssets("assets/pieces.json", renderer);
 
-    // Our state
-    GameState state;
-    state.board = BoardFactory::createStandardBoard();
+    OneMoveDeepBestPositionChessPlayer whitePlayer{"Andreas"};
+    HumanChessPlayer blackPlayer{"Human"};
+    GuiState state{whitePlayer, blackPlayer};
+
+    state.fieldStates.fill(FieldState::NORMAL);
+    state.game.startAsyncronousGame();
 
     // Main loop
     bool done = false;
@@ -187,13 +257,7 @@ int main(int, char**) {
                 done = true;
         }
 
-        /*
-                OneMoveDeepBestPositionChessPlayer whitePlayer{"Andreas"};
-                HumanChessPlayer blackPlayer{"Human"};
-                ChessGame game{whitePlayer, blackPlayer};
-                game.startSyncronousGame();
-        */
-
+        update_state(state);
         draw_gui(renderer, assets, state);
     }
 
