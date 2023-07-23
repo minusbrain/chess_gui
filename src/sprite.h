@@ -23,7 +23,8 @@ class Sprite {
     };
 
     Sprite(const std::shared_ptr<Texture> &texture, const SDL_Rect &rect);
-    void drawGUI(float scale) const;
+    void drawtoGui(float scale) const;
+    bool drawToGuiAsButton(const std::string &buttonId, float scale) const;
 
     virtual ~Sprite();
 

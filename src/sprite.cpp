@@ -19,7 +19,12 @@ Sprite::Sprite(const std::shared_ptr<Texture> &texture, const SDL_Rect &rect) : 
 
 Sprite::~Sprite() {}
 
-void Sprite::drawGUI(float scale) const {
+void Sprite::drawtoGui(float scale) const {
     ImGui::Image((void *)(intptr_t)_texture->getRaw(), ImVec2(_rect.w * scale, _rect.h * scale), ImVec2(_relRect.x, _relRect.y),
                  ImVec2(_relRect.w, _relRect.h));
+}
+
+bool Sprite::drawToGuiAsButton(const std::string &buttonId, float scale) const {
+    return ImGui::ImageButton(buttonId.c_str(), (void *)(intptr_t)_texture->getRaw(), ImVec2(_rect.w * scale, _rect.h * scale),
+                              ImVec2(_relRect.x, _relRect.y), ImVec2(_relRect.w, _relRect.h));
 }
