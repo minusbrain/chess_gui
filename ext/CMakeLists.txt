@@ -17,8 +17,8 @@ target_sources( imgui
                     ${IMGUI_DIR}/imgui.cpp
 
                 PRIVATE
-                    ${IMGUI_DIR}/backends/imgui_impl_sdl.cpp
-                    ${IMGUI_DIR}/backends/imgui_impl_sdlrenderer.cpp
+                    ${IMGUI_DIR}/backends/imgui_impl_sdl2.cpp
+                    ${IMGUI_DIR}/backends/imgui_impl_sdlrenderer2.cpp
                 )
 
 target_include_directories( imgui

@@ -5,8 +5,8 @@
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <imgui.h>
-#include <imgui_impl_sdl.h>
-#include <imgui_impl_sdlrenderer.h>
+#include <imgui_impl_sdl2.h>
+#include <imgui_impl_sdlrenderer2.h>
 #include <move_debug.h>
 #include <stdio.h>
 #include <types.h>
@@ -102,7 +102,7 @@ void update_state(GuiState& state) {
 
 void draw_gui(SDL_Renderer* renderer, const AssetMap& assets, GuiState& state) {
     // Start the Dear ImGui frame
-    ImGui_ImplSDLRenderer_NewFrame();
+    ImGui_ImplSDLRenderer2_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
@@ -186,7 +186,7 @@ void draw_gui(SDL_Renderer* renderer, const AssetMap& assets, GuiState& state) {
     SDL_SetRenderDrawColor(renderer, (Uint8)(clear_color.x * 255), (Uint8)(clear_color.y * 255), (Uint8)(clear_color.z * 255),
                            (Uint8)(clear_color.w * 255));
     SDL_RenderClear(renderer);
-    ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
+    ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData());
 
     SDL_RenderPresent(renderer);
 }
@@ -230,7 +230,7 @@ int main(int, char**) {
 
     // Setup Platform/Renderer backends
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
-    ImGui_ImplSDLRenderer_Init(renderer);
+    ImGui_ImplSDLRenderer2_Init(renderer);
 
     auto assets = loadAssets("assets/pieces.json", renderer);
 
@@ -265,7 +265,7 @@ int main(int, char**) {
     }
 
     // Cleanup
-    ImGui_ImplSDLRenderer_Shutdown();
+    ImGui_ImplSDLRenderer2_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
