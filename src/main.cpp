@@ -63,24 +63,6 @@ std::map<FieldState, ImVec4> FieldStateColors{{FieldState::SELECTED_HAS_MOVES, g
                                               {FieldState::CHECK_MATE, red}};
 
 void update_state(GuiState& state) {
-    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-        // Where did we click?
-        // Is there a field?
-        // Activate the field (are the moves available, show the moveable fields)
-        // Set selectedField properly
-
-        // MousePos.x - GetCursorScreenPos().x - GetScrollX()
-        // if (ImGui::IsMousePosValid())
-        //     ImGui::Text("Mouse pos: (%g, %g)", io.MousePos.x, io.MousePos.y);
-        // else
-        //     ImGui::Text("Mouse pos: <INVALID>");
-        // ImGui::Text("Mouse delta: (%g, %g)", io.MouseDelta.x, io.MouseDelta.y);
-
-        // int count = IM_ARRAYSIZE(io.MouseDown);
-        // ImGui::Text("Mouse down:");         for (int i = 0; i < count; i++) if (ImGui::IsMouseDown(i))      { ImGui::SameLine();
-        // ImGui::Text("b%d (%.02f secs)", i, io.MouseDownDuration[i]); } ImGui::Text("Mouse clicked:");      for (int i = 0; i < count;
-        // i++) if (ImGui::IsMouseClicked(i))
-    }
 
     if (state.board_state_changed) {
         state.fieldStates.fill(FieldState::NORMAL);
