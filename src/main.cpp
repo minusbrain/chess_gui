@@ -16,6 +16,7 @@
 #include <string>
 
 #include "assets.h"
+#include "human_gui_player.h"
 #include "rules.h"
 #include "sdl_helper.h"
 #include "sprite.h"
@@ -270,7 +271,7 @@ int main(int, char**) {
     auto assets = loadAssets("assets/pieces.json", renderer);
 
     OneMoveDeepBestPositionChessPlayer whitePlayer{"Andreas"};
-    HumanChessPlayer blackPlayer{"Human"};
+    HumanGuiPlayer blackPlayer{"Human"};
     GuiState state{whitePlayer, blackPlayer};
 
     state.fieldStates.fill(FieldState::NORMAL);

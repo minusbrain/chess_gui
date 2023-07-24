@@ -3,6 +3,7 @@ set (SOURCE_CPP
    texture.cpp
    sprite.cpp
    assets.cpp
+   human_gui_player.cpp
 )
 
 add_executable(chess_gui ${SOURCE_CPP})
