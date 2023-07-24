@@ -98,6 +98,9 @@ void update_state(GuiState& state) {
             auto moves = ChessRules::getAllValidMoves(board, state.selectedField.value());
             state.fieldStates[BoardHelper::fieldToIndex(state.selectedField.value())] =
                 moves.size() > 0 ? FieldState::SELECTED_HAS_MOVES : FieldState::SELECTED_NO_MOVES;
+            for (auto& move : moves) {
+                state.fieldStates[BoardHelper::fieldToIndex(move.getEndField())] = FieldState::MOVE_OPTION;
+            }
         }
         state.validMoves = ChessRules::getAllValidMoves(board);
 
