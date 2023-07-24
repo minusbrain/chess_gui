@@ -108,6 +108,15 @@ void update_state(GuiState& state) {
     }
 }
 
+void doMove(GuiState& state, ChessField start, ChessField end) {
+    for (auto& move : state.validMoves) {
+        if (move.getStartField() == start && move.getEndField() == end) {
+            state.game.doAsyncMove(state.game.getBoard().whosTurnIsIt(), move);
+            return;
+        }
+    }
+}
+
 void draw_gui(SDL_Renderer* renderer, const AssetMap& assets, GuiState& state) {
     // Start the Dear ImGui frame
     ImGui_ImplSDLRenderer2_NewFrame();
@@ -150,8 +159,9 @@ void draw_gui(SDL_Renderer* renderer, const AssetMap& assets, GuiState& state) {
                     ImGui::TableSetColumnIndex(column);
                     ChessField field{column + 1, 8 - row};
                     auto piece = state.game.getBoard().getPieceOnField(field);
+                    auto fieldState = state.fieldStates[BoardHelper::fieldToIndex(field)];
 
-                    if (state.fieldStates[BoardHelper::fieldToIndex(field)] == FieldState::NORMAL) {
+                    if (fieldState == FieldState::NORMAL) {
                         if (row % 2 == 0) {
                             ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg,
                                                    column % 2 == 0 ? ImGui::GetColorU32(white) : ImGui::GetColorU32(black));
@@ -161,13 +171,24 @@ void draw_gui(SDL_Renderer* renderer, const AssetMap& assets, GuiState& state) {
                                                    column % 2 == 0 ? ImGui::GetColorU32(black) : ImGui::GetColorU32(white));
                         }
                     } else {
-                        ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg,
-                                               ImGui::GetColorU32(FieldStateColors[state.fieldStates[BoardHelper::fieldToIndex(field)]]));
+                        ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(FieldStateColors[fieldState]));
+                        if (state.selectedField && fieldState == FieldState::MOVE_OPTION && !piece) {
+                            if (get<Sprite>(assets, "green_marker")->drawToGuiAsButton(fmt::format("bt_{}_{}", row, column), 1)) {
+                                doMove(state, state.selectedField.value(), field);
+                                state.selectedField = std::nullopt;
+                                state.board_state_changed = true;
+                            }
+                        }
                     }
 
                     if (piece) {
                         if (get<Sprite>(assets, piece_2_asset[*piece])->drawToGuiAsButton(fmt::format("bt_{}_{}", row, column), scale)) {
                             if (state.selectedField && state.selectedField.value() == field) {
+                                state.selectedField = std::nullopt;
+                                state.board_state_changed = true;
+                            } else if (state.selectedField && state.selectedField.value() != field &&
+                                       fieldState == FieldState::MOVE_OPTION) {
+                                doMove(state, state.selectedField.value(), field);
                                 state.selectedField = std::nullopt;
                                 state.board_state_changed = true;
                             } else {
