@@ -46,6 +46,7 @@ struct GuiState {
     bool show_chess = true;
     bool show_chess_log = true;
     bool board_state_changed = true;
+    bool runGame = true;
 };
 
 static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -63,6 +64,7 @@ std::map<FieldState, ImVec4> FieldStateColors{{FieldState::SELECTED_HAS_MOVES, g
                                               {FieldState::CHECK_MATE, red}};
 
 void update_state(GuiState& state) {
+    if (!state.runGame) return;
 
     if (state.board_state_changed) {
         state.fieldStates.fill(FieldState::NORMAL);
@@ -88,6 +90,16 @@ void update_state(GuiState& state) {
         state.validMoves = ChessRules::getAllValidMoves(board);
 
         state.board_state_changed = false;
+    }
+
+    if (state.game.getState() == ChessGame::State::FINISHED) {
+        state.runGame = false;
+        return;
+    }
+
+    if (state.game.getMovingPlayer().useGetMove()) {
+        Move move = state.game.getMovingPlayer().getMove(state.game.getBoard(), state.validMoves);
+        state.game.doAsyncMove(state.game.getBoard().whosTurnIsIt(), move);
     }
 }
 
