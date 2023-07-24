@@ -5,9 +5,23 @@
          "file": "assets/pieces.png",
          "transparencyX": 1,
          "transparencyY": 1
+      },
+      {
+         "name": "marker",
+         "file": "assets/marker.png",
+         "transparencyX": 1,
+         "transparencyY": 1
       }
    ],
    "sprites": [
+      {
+         "name": "green_marker",
+         "texture": "marker",
+         "posx": 0,
+         "posy": 0,
+         "sizex": 16,
+         "sizey": 16
+      },
       {
          "name": "white_bishop",
          "texture": "pieces",
