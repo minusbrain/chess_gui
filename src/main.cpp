@@ -135,10 +135,7 @@ void draw_gui(SDL_Renderer* renderer, const AssetMap& assets, GuiState& state) {
     if (state.show_chess) {
         static float scale = 2.0f;
 
-        std::string title =
-            fmt::format("Chess Board ({} move)", state.game.getBoard().whosTurnIsIt() == Color::WHITE ? "whites" : "blacks");
-
-        ImGui::Begin(title.c_str());
+        ImGui::Begin("Chess Board");
         // ImGui::ColorEdit3("White", (float*)&white);
         // ImGui::ColorEdit3("Black", (float*)&black);
         // ImGui::SliderFloat("Chess Scale", &scale, 0.5f, 4.0f);  // Edit 1 float using a slider from 0.0f to 1.0f
