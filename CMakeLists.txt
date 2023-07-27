@@ -25,4 +25,6 @@ include_directories(chess_gui PRIVATE ext/fmt/include)
 include_directories(chess_gui PRIVATE ../chess/src)
 
 add_subdirectory(src)
+file(COPY assets DESTINATION ${CMAKE_BINARY_DIR})
 install(TARGETS chess_gui DESTINATION bin)
+install(DIRECTORY assets DESTINATION bin)
