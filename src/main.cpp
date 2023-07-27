@@ -34,13 +34,14 @@ std::map<ChessPiece, std::string> piece_2_asset{
     {{Color::WHITE, Piece::QUEEN}, "white_queen"},   {{Color::BLACK, Piece::QUEEN}, "black_queen"},
     {{Color::WHITE, Piece::KING}, "white_king"},     {{Color::BLACK, Piece::KING}, "black_king"}};
 
-enum FieldState { NORMAL = 0, SELECTED_HAS_MOVES, SELECTED_NO_MOVES, MOVE_OPTION, CHECK, CHECK_MATE };
+enum FieldState { NORMAL = 0, SELECTED_HAS_MOVES, SELECTED_NO_MOVES, MOVE_OPTION, CHECK, CHECK_MATE, LAST_MOVE };
 struct GuiState {
     GuiState(ChessPlayer& white, ChessPlayer& black) : game(white, black) {}
     ChessGame game;
     std::array<FieldState, 64> fieldStates;
 
     std::optional<ChessField> selectedField;
+    std::optional<ChessField> lastMove;
     std::vector<Move> validMoves;
     bool show_demo_window = false;
     bool show_chess = true;
@@ -56,12 +57,23 @@ static ImVec4 light_green = ImVec4(120.0f / 255, 1.0f, 120.0f / 255, 1.0f);
 static ImVec4 green = ImVec4(0.0f, 0.8f, 0.0f, 1.0f);
 static ImVec4 white = ImVec4(0.4f, 0.4f, 0.8f, 1.0f);
 static ImVec4 black = ImVec4(0.0f, 0.0f, 0.2f, 1.0f);
+static ImVec4 grey = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
 
-std::map<FieldState, ImVec4> FieldStateColors{{FieldState::SELECTED_HAS_MOVES, green},
-                                              {FieldState::SELECTED_NO_MOVES, orange},
-                                              {FieldState::MOVE_OPTION, light_green},
-                                              {FieldState::CHECK, orange},
-                                              {FieldState::CHECK_MATE, red}};
+std::map<FieldState, ImVec4> FieldStateColors{{FieldState::SELECTED_HAS_MOVES, green}, {FieldState::SELECTED_NO_MOVES, orange},
+                                              {FieldState::MOVE_OPTION, light_green},  {FieldState::CHECK, orange},
+                                              {FieldState::CHECK_MATE, red},           {FieldState::LAST_MOVE, grey}};
+
+void doMove(GuiState& state, ChessField start, ChessField end) {
+    for (auto& move : state.validMoves) {
+        if (move.getStartField() == start && move.getEndField() == end) {
+            state.game.doAsyncMove(state.game.getBoard().whosTurnIsIt(), move);
+            state.lastMove = end;
+            state.selectedField = std::nullopt;
+            state.board_state_changed = true;
+            return;
+        }
+    }
+}
 
 void update_state(GuiState& state) {
     if (!state.runGame) return;
@@ -79,6 +91,9 @@ void update_state(GuiState& state) {
             state.fieldStates[BoardHelper::fieldToIndex(kingField)] =
                 ChessRules::isCheckMate(board) ? FieldState::CHECK_MATE : FieldState::CHECK;
         }
+        if (state.lastMove) {
+            state.fieldStates[BoardHelper::fieldToIndex(state.lastMove.value())] = FieldState::LAST_MOVE;
+        }
         if (state.selectedField) {
             auto moves = ChessRules::getAllValidMoves(board, state.selectedField.value());
             state.fieldStates[BoardHelper::fieldToIndex(state.selectedField.value())] =
@@ -87,6 +102,7 @@ void update_state(GuiState& state) {
                 state.fieldStates[BoardHelper::fieldToIndex(move.getEndField())] = FieldState::MOVE_OPTION;
             }
         }
+
         state.validMoves = ChessRules::getAllValidMoves(board);
 
         state.board_state_changed = false;
@@ -99,16 +115,7 @@ void update_state(GuiState& state) {
 
     if (state.game.getMovingPlayer().useGetMove()) {
         Move move = state.game.getMovingPlayer().getMove(state.game.getBoard(), state.validMoves);
-        state.game.doAsyncMove(state.game.getBoard().whosTurnIsIt(), move);
-    }
-}
-
-void doMove(GuiState& state, ChessField start, ChessField end) {
-    for (auto& move : state.validMoves) {
-        if (move.getStartField() == start && move.getEndField() == end) {
-            state.game.doAsyncMove(state.game.getBoard().whosTurnIsIt(), move);
-            return;
-        }
+        doMove(state, move.getStartField(), move.getEndField());
     }
 }
 
@@ -170,8 +177,6 @@ void draw_gui(SDL_Renderer* renderer, const AssetMap& assets, GuiState& state) {
                         if (state.selectedField && fieldState == FieldState::MOVE_OPTION && !piece) {
                             if (get<Sprite>(assets, "green_marker")->drawToGuiAsButton(fmt::format("bt_{}_{}", row, column), 1)) {
                                 doMove(state, state.selectedField.value(), field);
-                                state.selectedField = std::nullopt;
-                                state.board_state_changed = true;
                             }
                         }
                     }
@@ -184,8 +189,6 @@ void draw_gui(SDL_Renderer* renderer, const AssetMap& assets, GuiState& state) {
                             } else if (state.selectedField && state.selectedField.value() != field &&
                                        fieldState == FieldState::MOVE_OPTION) {
                                 doMove(state, state.selectedField.value(), field);
-                                state.selectedField = std::nullopt;
-                                state.board_state_changed = true;
                             } else {
                                 state.selectedField = field;
                                 state.board_state_changed = true;
