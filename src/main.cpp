@@ -1,5 +1,6 @@
 #include <SDL.h>
 #include <board.h>
+#include <board_debug.h>
 #include <board_factory.h>
 #include <chess_game.h>
 #include <fmt/core.h>
@@ -37,17 +38,24 @@ std::map<ChessPiece, std::string> piece_2_asset{
 enum FieldState { NORMAL = 0, SELECTED_HAS_MOVES, SELECTED_NO_MOVES, MOVE_OPTION, CHECK, CHECK_MATE, LAST_MOVE };
 struct GuiState {
     GuiState(ChessPlayer& white, ChessPlayer& black) : game(white, black) {}
-    ChessGame game;
-    std::array<FieldState, 64> fieldStates;
 
+    // Game State
+    ChessGame game;
+    bool runGame = true;
+
+    // GUI State
     std::optional<ChessField> selectedField;
     std::optional<ChessField> lastMove;
     std::vector<Move> validMoves;
+    std::vector<Move> validMovesOfSelectedPiece;
+    bool board_state_changed = true;
+
     bool show_demo_window = false;
     bool show_chess = true;
     bool show_chess_log = true;
-    bool board_state_changed = true;
-    bool runGame = true;
+    std::array<FieldState, 64> fieldStates;
+
+    std::string log_text;
 };
 
 static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -75,6 +83,19 @@ void doMove(GuiState& state, ChessField start, ChessField end) {
     }
 }
 
+void update_logtext(GuiState& state) {
+    state.log_text = fmt::format("It's {}'s move\n", state.game.getMovingPlayer().getName());
+    state.log_text += fmt::format("All available moves: {}\n", state.validMoves);
+    if (state.selectedField) {
+        state.log_text +=
+            fmt::format("Selected piece {} on {} has the following potential moves: {}\n",
+                        state.game.getBoard().getPieceOnField(state.selectedField.value()).value_or(ChessPiece{Color::WHITE, Piece::DECOY}),
+                        state.selectedField.value(), state.validMovesOfSelectedPiece);
+    }
+
+    // Valid Moves:{}", state.game.getBoard().whosTurnIsIt() == Color::WHITE ? "whites" : "blacks", state.validMoves);
+}
+
 void update_state(GuiState& state) {
     if (!state.runGame) return;
 
@@ -95,15 +116,18 @@ void update_state(GuiState& state) {
             state.fieldStates[BoardHelper::fieldToIndex(state.lastMove.value())] = FieldState::LAST_MOVE;
         }
         if (state.selectedField) {
-            auto moves = ChessRules::getAllValidMoves(board, state.selectedField.value());
+            state.validMovesOfSelectedPiece = ChessRules::getAllValidMoves(board, state.selectedField.value());
             state.fieldStates[BoardHelper::fieldToIndex(state.selectedField.value())] =
-                moves.size() > 0 ? FieldState::SELECTED_HAS_MOVES : FieldState::SELECTED_NO_MOVES;
-            for (auto& move : moves) {
+                state.validMovesOfSelectedPiece.size() > 0 ? FieldState::SELECTED_HAS_MOVES : FieldState::SELECTED_NO_MOVES;
+            for (auto& move : state.validMovesOfSelectedPiece) {
                 state.fieldStates[BoardHelper::fieldToIndex(move.getEndField())] = FieldState::MOVE_OPTION;
             }
         }
-
         state.validMoves = ChessRules::getAllValidMoves(board);
+
+        if (state.show_chess_log) {
+            update_logtext(state);
+        }
 
         state.board_state_changed = false;
     }
@@ -206,10 +230,8 @@ void draw_gui(SDL_Renderer* renderer, const AssetMap& assets, GuiState& state) {
 
     if (state.show_chess_log) {
         ImGui::Begin("Chess Log");
-        std::string status = fmt::format("Chess Board ({} move)\nValid Moves:{}",
-                                         state.game.getBoard().whosTurnIsIt() == Color::WHITE ? "whites" : "blacks", state.validMoves);
         // Using shortcut. You can use PushTextWrapPos()/PopTextWrapPos() for more flexibility.
-        ImGui::TextWrapped("%s", status.c_str());
+        ImGui::TextWrapped("%s", state.log_text.c_str());
         ImGui::Spacing();
         ImGui::End();
     }
