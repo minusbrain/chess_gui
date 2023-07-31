@@ -1,8 +1,3 @@
-# Chess GUI
+# Moved
 
-Simple ImGUI based chess game. Currently you can play exactly one match human vs. human
-on the same PC. To be extended.
-
-# Sprites
-
-From [Rad Potato](https://rad-potato.itch.io/pixel-perfect-ultimate-game-component-kit)
+This repository moved into the [engine repository](https://github.com/minusbrain/chess)
